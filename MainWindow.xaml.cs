@@ -1,4 +1,5 @@
 ﻿using System.Windows;
+using System.ComponentModel;
 using OrderViewApp.ViewModels;
 
 namespace OrderViewApp
@@ -12,7 +13,11 @@ namespace OrderViewApp
         {
             InitializeComponent();
             // ViewModelをDataContextに設定
-            DataContext = new MainViewModel();
+            var viewModel = new MainViewModel();
+            DataContext = viewModel;
+            
+            // 並び替えリセットイベントを購読
+            viewModel.ResetSortRequested += ViewModel_ResetSortRequested;
             
             // 画面表示後にデータを読み込む
             Loaded += MainWindow_Loaded;
@@ -24,6 +29,15 @@ namespace OrderViewApp
             if (DataContext is MainViewModel viewModel)
             {
                 await viewModel.LoadOrdersAsync();
+            }
+        }
+
+        private void ViewModel_ResetSortRequested(object? sender, System.EventArgs e)
+        {
+            // DataGridの並び替えをクリア
+            if (OrdersGrid.Items is ICollectionView collectionView)
+            {
+                collectionView.SortDescriptions.Clear();
             }
         }
     }

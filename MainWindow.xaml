@@ -52,7 +52,7 @@
                 
                 <!-- タイトル行 -->
                 <TextBlock Grid.Row="0"
-                           Text="準備商品 リアルタイム可視化システム" 
+                           Text="準備商品 リアルタイム可視化システム   （３０秒間隔で更新）期間をカスタムにすることで、金曜日に月曜日のデータを表示できます。" 
                            VerticalAlignment="Center" 
                            Margin="15,0" 
                            FontSize="18" 
@@ -133,6 +133,16 @@
                               VerticalAlignment="Center"
                               Margin="20,0,10,0"
                               FontSize="15"/>
+                    
+                    <!-- 早い順ボタン -->
+                    <Button Command="{Binding ResetSortCommand}"
+                            Content="早い順"
+                            FontSize="14"
+                            Width="80"
+                            Height="30"
+                            VerticalAlignment="Center"
+                            Margin="20,0,10,0"
+                            ToolTip="期日と期限の早い順に並び替えをリセット"/>
                     
                     <!-- リロードボタン -->
                     <Button Command="{Binding ReloadCommand}"

@@ -10,6 +10,7 @@ using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Threading;
 
 namespace OrderViewApp.ViewModels
 {
@@ -22,6 +23,9 @@ namespace OrderViewApp.ViewModels
         private List<Order> _allOrders = new List<Order>();
 
         private readonly OrderService? _orderService;
+
+        // 自動更新用のタイマー
+        private DispatcherTimer? _autoRefreshTimer;
 
         // 期限の優先順位マッピング（数値が小さいほど優先度が高い）
         private static readonly Dictionary<string, int> ExpiryDatePriority = new Dictionary<string, int>
@@ -211,6 +215,19 @@ namespace OrderViewApp.ViewModels
                     }));
                 }
             }
+
+            // 自動更新用のタイマーを初期化
+            InitializeAutoRefreshTimer();
+        }
+
+        private void InitializeAutoRefreshTimer()
+        {
+            _autoRefreshTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromSeconds(30)
+            };
+            _autoRefreshTimer.Tick += async (sender, e) => await LoadOrdersAsync();
+            _autoRefreshTimer.Start();
         }
 
         public async Task LoadOrdersAsync()
@@ -295,6 +312,23 @@ namespace OrderViewApp.ViewModels
             }
         }
 
+        // 並び替えリセットイベント
+        public event EventHandler? ResetSortRequested;
+
+        // 並び替えリセットコマンド
+        private ICommand? _resetSortCommand;
+        public ICommand ResetSortCommand
+        {
+            get
+            {
+                if (_resetSortCommand == null)
+                {
+                    _resetSortCommand = new RelayCommand(_ => ResetSortRequested?.Invoke(this, EventArgs.Empty));
+                }
+                return _resetSortCommand;
+            }
+        }
+
         // シンプルなRelayCommand実装
         private class RelayCommand : ICommand
         {
@@ -361,11 +395,23 @@ namespace OrderViewApp.ViewModels
                 o.Requirements == "交換"
             );
 
-            // 配達用件の出発フィルターを適用（用件が「配達」の場合、出発が0のデータのみ表示）
-            filteredOrders = filteredOrders.Where(o => 
-                o.Requirements != "<配達>" || 
-                (o.Departure == false || o.Departure == null)
-            );
+            // 配達用件の出発フィルターを適用（表示モードに応じて条件を変更）
+            if (_selectedDisplayMode == DisplayModeType.Incomplete)
+            {
+                // 未完了モード：用件が「配達」の場合、出発が0のデータのみ表示
+                filteredOrders = filteredOrders.Where(o => 
+                    o.Requirements != "<配達>" || 
+                    (o.Departure == false || o.Departure == null)
+                );
+            }
+            else
+            {
+                // 完了含む・完了のみモード：用件が「配達」の場合、出発が0または1のデータを表示
+                filteredOrders = filteredOrders.Where(o => 
+                    o.Requirements != "<配達>" || 
+                    (o.Departure == false || o.Departure == null || o.Departure == true)
+                );
+            }
 
             // 並び替え処理：受付番号でグループ化してから、期日と期限で並び替え
             // 同じ受付番号のOrderは期日と期限が同じため、グループの代表値でソート
